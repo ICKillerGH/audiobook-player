@@ -1,11 +1,11 @@
-import type { CSSProperties, ReactNode, Ref } from "react";
+import { useState, type CSSProperties, type MouseEvent, type ReactNode, type Ref } from "react";
 import type { Audiobook, PlayerSettings } from "@shared/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { BookCover, HeroPlaceholder } from "@/shared/components/BookCover";
 import { BackIcon, BookmarkIcon, ForwardIcon, InfoIcon, PauseIcon, PlayIcon, TimerIcon } from "@/shared/components/icons";
-import { formatCountdown, formatTime } from "@/shared/lib/format";
+import { clamp, formatCountdown, formatTime } from "@/shared/lib/format";
 
 const speedOptions = [0.75, 1, 1.15, 1.25, 1.5, 1.75, 2, 2.5];
 
@@ -119,17 +119,12 @@ export function NowPlayingPanel({
             </div>
 
             <div className="mt-6">
-              <input
-                className="range-apple"
-                type="range"
-                min={0}
-                max={Math.max(duration, 1)}
-                step={1}
-                value={Math.min(currentTime, Math.max(duration, 1))}
-                onChange={(event) => void onSeek(Number(event.target.value))}
-                style={{ "--range-progress": `${progressPercent}%` } as CSSProperties}
+              <SeekRange
                 disabled={!book}
-                aria-label="Playback progress"
+                currentTime={currentTime}
+                duration={duration}
+                progressPercent={progressPercent}
+                onSeek={onSeek}
               />
               <div className="mt-2 flex justify-between text-control text-white/[0.55]">
                 <span>{formatTime(currentTime)}</span>
@@ -177,6 +172,65 @@ export function NowPlayingPanel({
         </div>
       </div>
     </section>
+  );
+}
+
+function SeekRange({
+  disabled,
+  currentTime,
+  duration,
+  progressPercent,
+  onSeek
+}: {
+  disabled: boolean;
+  currentTime: number;
+  duration: number;
+  progressPercent: number;
+  onSeek: (value: number) => void | Promise<void>;
+}) {
+  const [hoverPreview, setHoverPreview] = useState<{ percent: number; time: number } | null>(null);
+  const maxDuration = Math.max(duration, 1);
+
+  function updateHoverPreview(event: MouseEvent<HTMLInputElement>): void {
+    if (disabled || duration <= 0) {
+      setHoverPreview(null);
+      return;
+    }
+
+    const rect = event.currentTarget.getBoundingClientRect();
+    const ratio = clamp((event.clientX - rect.left) / rect.width, 0, 1);
+    setHoverPreview({
+      percent: ratio * 100,
+      time: ratio * duration
+    });
+  }
+
+  return (
+    <div className="relative pt-8">
+      {hoverPreview ? (
+        <div
+          className="pointer-events-none absolute top-0 z-10 -translate-x-1/2 rounded-full bg-white px-3 py-1.5 font-text text-micro font-semibold tabular-nums text-apple-ink shadow-soft"
+          style={{ left: `${hoverPreview.percent}%` }}
+        >
+          {formatTime(hoverPreview.time)}
+        </div>
+      ) : null}
+      <input
+        className="range-apple"
+        type="range"
+        min={0}
+        max={maxDuration}
+        step={1}
+        value={Math.min(currentTime, maxDuration)}
+        onChange={(event) => void onSeek(Number(event.target.value))}
+        onMouseEnter={updateHoverPreview}
+        onMouseMove={updateHoverPreview}
+        onMouseLeave={() => setHoverPreview(null)}
+        style={{ "--range-progress": `${progressPercent}%` } as CSSProperties}
+        disabled={disabled}
+        aria-label="Playback progress"
+      />
+    </div>
   );
 }
 
