@@ -43,14 +43,27 @@
       "buildResources": "resources",
       "output": "release"
     },
+    "extraResources": [
+      {
+        "from": "resources",
+        "to": "resources",
+        "filter": [
+          "*.png",
+          "*.ico"
+        ]
+      }
+    ],
     "files": [
       "out/**/*",
       "package.json"
     ],
     "win": {
+      "icon": "resources/icon.ico",
       "target": "nsis"
     },
     "nsis": {
+      "installerIcon": "resources/icon.ico",
+      "uninstallerIcon": "resources/icon.ico",
       "oneClick": false,
       "allowToChangeInstallationDirectory": true
     }

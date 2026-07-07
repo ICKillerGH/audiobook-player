@@ -1,6 +1,6 @@
-import { app, BrowserWindow, dialog, ipcMain, shell } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, nativeImage, shell, type NativeImage } from "electron";
 import { createHash, randomUUID } from "node:crypto";
-import { createReadStream } from "node:fs";
+import { createReadStream, existsSync } from "node:fs";
 import { mkdir, readFile, readdir, rename, stat, writeFile } from "node:fs/promises";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { dirname, extname, join, parse, resolve } from "node:path";
@@ -38,8 +38,26 @@ let mediaServerPort: number | null = null;
 
 const mediaToken = randomUUID();
 const osMediaStates = new Map<number, OsMediaState>();
+const windowsAppUserModelId = "com.local.audiobookplayer";
+
+function bundledResourcePath(fileName: string): string {
+  return app.isPackaged
+    ? join(process.resourcesPath, "resources", fileName)
+    : join(process.cwd(), "resources", fileName);
+}
+
+function appIcon(): NativeImage | undefined {
+  const iconPath = bundledResourcePath(process.platform === "win32" ? "icon.ico" : "icon.png");
+  const fallbackPath = bundledResourcePath("icon.png");
+  const resolvedPath = existsSync(iconPath) ? iconPath : fallbackPath;
+  if (!existsSync(resolvedPath)) return undefined;
+
+  const icon = nativeImage.createFromPath(resolvedPath);
+  return icon.isEmpty() ? undefined : icon;
+}
 
 function createWindow(): void {
+  const icon = appIcon();
   const mainWindow = new BrowserWindow({
     width: 1320,
     height: 860,
@@ -48,6 +66,7 @@ function createWindow(): void {
     backgroundColor: "#f5f5f7",
     show: false,
     title: "Audiobook Player",
+    icon,
     titleBarStyle: "hidden",
     titleBarOverlay: {
       color: "#f5f5f7",
@@ -61,6 +80,10 @@ function createWindow(): void {
       sandbox: false
     }
   });
+
+  if (icon) {
+    mainWindow.setIcon(icon);
+  }
 
   mainWindow.setMenuBarVisibility(false);
   mainWindow.on("app-command", (event, command) => {
@@ -607,8 +630,10 @@ function registerIpc(): void {
   });
 }
 
-if (process.platform === "win32") {
-  app.setAppUserModelId("Audiobook Player");
+app.setName("Audiobook Player");
+
+if (process.platform === "win32" && app.isPackaged) {
+  app.setAppUserModelId(windowsAppUserModelId);
 }
 
 app.whenReady().then(() => {
