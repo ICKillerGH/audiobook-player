@@ -6,6 +6,7 @@ import { filterBooks } from "@/features/library/library-utils";
 import { LibraryPanel } from "@/features/library/LibraryPanel";
 import { MarkersDialog } from "@/features/markers/MarkersDialog";
 import { NowPlayingPanel } from "@/features/player/NowPlayingPanel";
+import { useOsMediaControls } from "@/features/player/useOsMediaControls";
 import { SleepTimerDialog } from "@/features/sleep/SleepTimerDialog";
 import { clamp, formatTime } from "@/shared/lib/format";
 
@@ -40,6 +41,20 @@ function App() {
   const selectedBook = books.find((book) => book.id === selectedBookId) ?? books[0];
   const visibleBooks = filterBooks(books, search);
   const progressPercent = duration > 0 ? clamp((currentTime / duration) * 100, 0, 100) : 0;
+
+  useOsMediaControls({
+    book: selectedBook,
+    mediaUrl,
+    isPlaying,
+    currentTime,
+    duration,
+    playbackRate: settings.playbackRate,
+    skipSeconds: settings.skipSeconds,
+    onPlay: playSelectedBook,
+    onPause: pausePlayback,
+    onSeek: seekTo,
+    onSkip: skipBy
+  });
 
   useEffect(() => {
     void bootstrap();
@@ -161,23 +176,39 @@ function App() {
     setStatusMessage("Removed from library. The audio file was left untouched.");
   }
 
+  async function playSelectedBook(): Promise<void> {
+    const audio = audioRef.current;
+    if (!audio || !selectedBook || !mediaUrl) return;
+
+    if (!audio.paused) return;
+
+    try {
+      await audio.play();
+      setIsPlaying(true);
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : "Playback could not start.");
+    }
+  }
+
+  async function pausePlayback(): Promise<void> {
+    const audio = audioRef.current;
+    if (!audio || audio.paused) return;
+
+    audio.pause();
+    setIsPlaying(false);
+    await persistProgress(audio.currentTime, audio.duration);
+  }
+
   async function togglePlayback(): Promise<void> {
     const audio = audioRef.current;
     if (!audio || !selectedBook || !mediaUrl) return;
 
     if (audio.paused) {
-      try {
-        await audio.play();
-        setIsPlaying(true);
-      } catch (error) {
-        setLoadError(error instanceof Error ? error.message : "Playback could not start.");
-      }
+      await playSelectedBook();
       return;
     }
 
-    audio.pause();
-    setIsPlaying(false);
-    await persistProgress(audio.currentTime, audio.duration);
+    await pausePlayback();
   }
 
   function onLoadedMetadata(): void {

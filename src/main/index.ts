@@ -11,6 +11,8 @@ import type {
   AudiobookMarker,
   ImportError,
   ImportResult,
+  OsMediaCommand,
+  OsMediaState,
   PlayerSettings,
   SaveProgressInput,
   SupportedAudioExtension
@@ -35,6 +37,7 @@ let mediaServer: Server | null = null;
 let mediaServerPort: number | null = null;
 
 const mediaToken = randomUUID();
+const osMediaStates = new Map<number, OsMediaState>();
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -60,6 +63,14 @@ function createWindow(): void {
   });
 
   mainWindow.setMenuBarVisibility(false);
+  mainWindow.on("app-command", (event, command) => {
+    const osCommand = osMediaCommandForAppCommand(command, osMediaStates.get(mainWindow.id));
+    if (!osCommand) return;
+    event.preventDefault();
+    sendOsMediaCommand(mainWindow, osCommand);
+  });
+  mainWindow.on("closed", () => osMediaStates.delete(mainWindow.id));
+  updateWindowOsMediaState(mainWindow, { canPlay: false, isPlaying: false });
   mainWindow.once("ready-to-show", () => mainWindow.show());
 
   if (process.env.ELECTRON_RENDERER_URL) {
@@ -67,6 +78,52 @@ function createWindow(): void {
   } else {
     void mainWindow.loadFile(join(__dirname, "../renderer/index.html"));
   }
+}
+
+function normalizeOsMediaState(value: unknown): OsMediaState {
+  if (!value || typeof value !== "object") {
+    return { canPlay: false, isPlaying: false };
+  }
+
+  const candidate = value as Partial<OsMediaState>;
+  return {
+    canPlay: Boolean(candidate.canPlay),
+    isPlaying: Boolean(candidate.isPlaying),
+    title: typeof candidate.title === "string" && candidate.title.trim() ? candidate.title.trim() : undefined,
+    author: typeof candidate.author === "string" && candidate.author.trim() ? candidate.author.trim() : undefined
+  };
+}
+
+function sendOsMediaCommand(targetWindow: BrowserWindow, command: OsMediaCommand): void {
+  if (targetWindow.isDestroyed()) return;
+  targetWindow.webContents.send("os-media:command", command);
+}
+
+function osMediaCommandForAppCommand(command: string, state: OsMediaState | undefined): OsMediaCommand | null {
+  if (!state?.canPlay) return null;
+
+  switch (command) {
+    case "media-play-pause":
+      return state?.isPlaying ? "pause" : "play";
+    case "media-play":
+      return "play";
+    case "media-pause":
+    case "media-stop":
+      return "pause";
+    case "media-nexttrack":
+    case "media-next-track":
+      return "seek-forward";
+    case "media-previoustrack":
+    case "media-previous-track":
+      return "seek-backward";
+    default:
+      return null;
+  }
+}
+
+function updateWindowOsMediaState(targetWindow: BrowserWindow, state: OsMediaState): void {
+  if (targetWindow.isDestroyed()) return;
+  osMediaStates.set(targetWindow.id, state);
 }
 
 function storePath(): string {
@@ -472,6 +529,12 @@ async function ensureMediaServer(): Promise<number> {
 }
 
 function registerIpc(): void {
+  ipcMain.on("os-media:update-state", (event, state: unknown) => {
+    const targetWindow = BrowserWindow.fromWebContents(event.sender);
+    if (!targetWindow) return;
+    updateWindowOsMediaState(targetWindow, normalizeOsMediaState(state));
+  });
+
   ipcMain.handle("library:get", async () => sortBooks((await loadStore()).books));
 
   ipcMain.handle("library:import-files", async () => {

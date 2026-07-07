@@ -58,6 +58,15 @@ export interface AddMarkerInput {
   label?: string;
 }
 
+export type OsMediaCommand = "play" | "pause" | "seek-backward" | "seek-forward";
+
+export interface OsMediaState {
+  canPlay: boolean;
+  isPlaying: boolean;
+  title?: string;
+  author?: string;
+}
+
 export interface AudiobookApi {
   getLibrary: () => Promise<Audiobook[]>;
   importFiles: () => Promise<ImportResult>;
@@ -70,4 +79,6 @@ export interface AudiobookApi {
   getSettings: () => Promise<PlayerSettings>;
   updateSettings: (settings: Partial<PlayerSettings>) => Promise<PlayerSettings>;
   revealInFolder: (bookId: string) => Promise<void>;
+  setOsMediaState: (state: OsMediaState) => void;
+  onOsMediaCommand: (callback: (command: OsMediaCommand) => void) => () => void;
 }
