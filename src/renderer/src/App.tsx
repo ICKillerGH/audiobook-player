@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import type { Audiobook, AudiobookMarker, ImportResult, PlayerSettings } from "@shared/types";
-import { Surface } from "@/components/ui/surface";
 import { AppHeader } from "@/app/AppHeader";
-import { BookDetailsPanel } from "@/features/book-details/BookDetailsPanel";
+import { BookDetailsDialog } from "@/features/book-details/BookDetailsDialog";
 import { filterBooks } from "@/features/library/library-utils";
 import { LibraryPanel } from "@/features/library/LibraryPanel";
-import { MarkerComposer } from "@/features/markers/MarkerComposer";
+import { MarkersDialog } from "@/features/markers/MarkersDialog";
 import { NowPlayingPanel } from "@/features/player/NowPlayingPanel";
-import { SleepTimerPanel } from "@/features/sleep/SleepTimerPanel";
+import { SleepTimerDialog } from "@/features/sleep/SleepTimerDialog";
 import { clamp, formatTime } from "@/shared/lib/format";
+
+type ActiveModal = "markers" | "sleep" | "details" | null;
 
 const defaultSettings: PlayerSettings = {
   playbackRate: 1,
@@ -32,6 +33,7 @@ function App() {
   const [markerLabel, setMarkerLabel] = useState("");
   const [sleepRemaining, setSleepRemaining] = useState<number | null>(null);
   const [customSleepMinutes, setCustomSleepMinutes] = useState("25");
+  const [activeModal, setActiveModal] = useState<ActiveModal>(null);
   const [statusMessage, setStatusMessage] = useState("Add a folder or a few audiobook files to begin.");
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -305,64 +307,72 @@ function App() {
             onSelectBook={setSelectedBookId}
           />
 
-          <section className="grid min-h-0 gap-5 lg:grid-rows-[minmax(390px,0.96fr)_minmax(260px,0.58fr)]">
-            <NowPlayingPanel
-              book={selectedBook}
-              audioRef={audioRef}
-              mediaUrl={mediaUrl}
-              settings={settings}
-              currentTime={currentTime}
-              duration={duration}
-              isPlaying={isPlaying}
-              loadError={loadError}
-              progressPercent={progressPercent}
-              onSeek={seekTo}
-              onSkip={skipBy}
-              onTogglePlayback={togglePlayback}
-              onChangePlaybackRate={changePlaybackRate}
-              onLoadedMetadata={onLoadedMetadata}
-              onTimeUpdate={onTimeUpdate}
-              onAudioPlay={() => setIsPlaying(true)}
-              onAudioPause={() => {
-                setIsPlaying(false);
-                void persistProgress();
-              }}
-              onAudioEnded={() => {
-                setIsPlaying(false);
-                void persistProgress(duration, duration);
-              }}
-            />
-
-            <section className="grid min-h-0 gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
-              <Surface className="min-h-0" innerClassName="grid min-h-0 gap-4 overflow-hidden p-4 md:grid-cols-2">
-                <MarkerComposer
-                  selectedBook={selectedBook}
-                  markerLabel={markerLabel}
-                  currentTime={currentTime}
-                  onMarkerLabelChange={setMarkerLabel}
-                  onAddMarker={addMarker}
-                />
-                <SleepTimerPanel
-                  sleepRemaining={sleepRemaining}
-                  customSleepMinutes={customSleepMinutes}
-                  onCustomSleepMinutesChange={setCustomSleepMinutes}
-                  onStartPreset={startSleepTimer}
-                  onStartCustom={startCustomSleepTimer}
-                  onCancel={() => setSleepRemaining(null)}
-                />
-              </Surface>
-
-              <BookDetailsPanel
-                selectedBook={selectedBook}
-                statusMessage={statusMessage}
-                onRevealInFolder={(bookId) => window.audiobook.revealInFolder(bookId)}
-                onRemoveBook={removeSelectedBook}
-                onJumpToMarker={jumpToMarker}
-                onRemoveMarker={removeMarker}
-              />
-            </section>
-          </section>
+          <NowPlayingPanel
+            book={selectedBook}
+            audioRef={audioRef}
+            mediaUrl={mediaUrl}
+            settings={settings}
+            currentTime={currentTime}
+            duration={duration}
+            isPlaying={isPlaying}
+            loadError={loadError}
+            progressPercent={progressPercent}
+            markerCount={selectedBook?.markers.length ?? 0}
+            sleepRemaining={sleepRemaining}
+            onOpenMarkers={() => setActiveModal("markers")}
+            onOpenSleep={() => setActiveModal("sleep")}
+            onOpenDetails={() => setActiveModal("details")}
+            onSeek={seekTo}
+            onSkip={skipBy}
+            onTogglePlayback={togglePlayback}
+            onChangePlaybackRate={changePlaybackRate}
+            onLoadedMetadata={onLoadedMetadata}
+            onTimeUpdate={onTimeUpdate}
+            onAudioPlay={() => setIsPlaying(true)}
+            onAudioPause={() => {
+              setIsPlaying(false);
+              void persistProgress();
+            }}
+            onAudioEnded={() => {
+              setIsPlaying(false);
+              void persistProgress(duration, duration);
+            }}
+          />
         </main>
+
+        <MarkersDialog
+          open={activeModal === "markers"}
+          selectedBook={selectedBook}
+          markerLabel={markerLabel}
+          currentTime={currentTime}
+          onOpenChange={(open) => setActiveModal(open ? "markers" : null)}
+          onMarkerLabelChange={setMarkerLabel}
+          onAddMarker={addMarker}
+          onJumpToMarker={jumpToMarker}
+          onRemoveMarker={removeMarker}
+        />
+
+        <SleepTimerDialog
+          open={activeModal === "sleep"}
+          sleepRemaining={sleepRemaining}
+          customSleepMinutes={customSleepMinutes}
+          onOpenChange={(open) => setActiveModal(open ? "sleep" : null)}
+          onCustomSleepMinutesChange={setCustomSleepMinutes}
+          onStartPreset={startSleepTimer}
+          onStartCustom={startCustomSleepTimer}
+          onCancel={() => setSleepRemaining(null)}
+        />
+
+        <BookDetailsDialog
+          open={activeModal === "details"}
+          selectedBook={selectedBook}
+          statusMessage={statusMessage}
+          onOpenChange={(open) => setActiveModal(open ? "details" : null)}
+          onRevealInFolder={(bookId) => window.audiobook.revealInFolder(bookId)}
+          onRemoveBook={removeSelectedBook}
+          onJumpToMarker={jumpToMarker}
+          onRemoveMarker={removeMarker}
+        />
       </div>
     </div>
   );

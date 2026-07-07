@@ -1,34 +1,22 @@
 import type { Audiobook, AudiobookMarker } from "@shared/types";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Surface } from "@/components/ui/surface";
-import { bookProgress, formatDate, formatFileSize, formatTime } from "@/shared/lib/format";
+import { formatDate, formatTime } from "@/shared/lib/format";
 
-interface BookDetailsPanelProps {
+interface MarkerListPanelProps {
   selectedBook?: Audiobook;
-  statusMessage: string;
-  onRevealInFolder: (bookId: string) => void | Promise<void>;
-  onRemoveBook: () => void | Promise<void>;
   onJumpToMarker: (marker: AudiobookMarker) => void | Promise<void>;
   onRemoveMarker: (marker: AudiobookMarker) => void | Promise<void>;
 }
 
-export function BookDetailsPanel({ selectedBook, statusMessage, onRevealInFolder, onRemoveBook, onJumpToMarker, onRemoveMarker }: BookDetailsPanelProps) {
+export function MarkerListPanel({ selectedBook, onJumpToMarker, onRemoveMarker }: MarkerListPanelProps) {
   return (
-    <Surface className="min-h-0" innerClassName="flex min-h-0 flex-col p-4">
-      <div className="mb-3 flex items-start justify-between gap-3">
-        <div>
-          <Badge>Book Details</Badge>
-          <h3 className="mt-3 font-display text-utility">Markers</h3>
-        </div>
-        {selectedBook ? (
-          <Button variant="ghost" size="sm" onClick={() => void onRevealInFolder(selectedBook.id)}>
-            Reveal
-          </Button>
-        ) : null}
+    <section className="scroll-quiet flex max-h-[520px] min-h-[280px] flex-col overflow-y-auto rounded-module bg-white p-4 shadow-hairline">
+      <div className="mb-4">
+        <Badge>Saved Places</Badge>
+        <h3 className="mt-3 font-display text-utility text-apple-ink">Marker list</h3>
       </div>
 
-      <div className="scroll-quiet min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
+      <div className="space-y-3">
         {selectedBook?.markers.length ? (
           selectedBook.markers.map((marker) => (
             <div key={marker.id} className="rounded-panel bg-apple-gray p-3">
@@ -61,16 +49,6 @@ export function BookDetailsPanel({ selectedBook, statusMessage, onRevealInFolder
           </div>
         )}
       </div>
-
-      <div className="mt-3 border-t border-apple-soft pt-3 text-control text-apple-neutral">
-        <p className="truncate">{selectedBook?.fileName ?? "No file selected"}</p>
-        <p className="mt-1">{selectedBook ? `${formatFileSize(selectedBook.size)} · ${bookProgress(selectedBook)}% complete` : statusMessage}</p>
-        {selectedBook ? (
-          <Button variant="ghost" size="sm" className="mt-3 text-apple-neutral" onClick={() => void onRemoveBook()}>
-            Remove from library
-          </Button>
-        ) : null}
-      </div>
-    </Surface>
+    </section>
   );
 }

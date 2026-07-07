@@ -4,11 +4,11 @@ import { PlayIcon } from "./icons";
 
 interface BookCoverProps {
   book: Audiobook;
-  size: "small" | "large";
+  size: "small" | "large" | "player";
 }
 
 export function BookCover({ book, size }: BookCoverProps) {
-  const isLarge = size === "large";
+  const isLarge = size === "large" || size === "player";
   const initials = book.title
     .split(/\s+/)
     .filter(Boolean)
@@ -20,7 +20,9 @@ export function BookCover({ book, size }: BookCoverProps) {
     <div
       className={cn(
         "shrink-0 rounded-[1.35rem] bg-white/10 p-1 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)]",
-        isLarge ? "aspect-[3/4] h-[clamp(220px,30vh,310px)] rounded-[2.15rem] p-2" : "h-20 w-16"
+        size === "player" && "aspect-[3/4] h-[clamp(300px,54vh,560px)] rounded-[2.35rem] p-2",
+        size === "large" && "aspect-[3/4] h-[clamp(220px,30vh,310px)] rounded-[2.15rem] p-2",
+        size === "small" && "h-20 w-16"
       )}
     >
       <div className="relative h-full overflow-hidden rounded-[calc(1.35rem-0.25rem)] bg-apple-ink shadow-innerHighlight">
@@ -28,8 +30,8 @@ export function BookCover({ book, size }: BookCoverProps) {
           <img src={book.coverDataUrl} alt="" className={cn("h-full w-full", isLarge ? "object-contain" : "object-cover")} />
         ) : (
           <div className="flex h-full w-full flex-col justify-between bg-[radial-gradient(circle_at_50%_15%,rgba(41,151,255,0.34),transparent_30%),linear-gradient(160deg,#272729,#000000)] p-3 text-white">
-            <span className={cn("font-display font-semibold", isLarge ? "text-[64px] tracking-[-0.06em]" : "text-xl")}>{initials || "AB"}</span>
-            <span className={cn("line-clamp-3 font-text font-semibold", isLarge ? "text-[22px] leading-tight" : "text-[10px] leading-tight")}>{book.title}</span>
+            <span className={cn("font-display font-semibold", size === "player" ? "text-[72px] tracking-[-0.06em]" : isLarge ? "text-[64px] tracking-[-0.06em]" : "text-xl")}>{initials || "AB"}</span>
+            <span className={cn("line-clamp-3 font-text font-semibold", size === "player" ? "text-[26px] leading-tight" : isLarge ? "text-[22px] leading-tight" : "text-[10px] leading-tight")}>{book.title}</span>
           </div>
         )}
       </div>
@@ -37,9 +39,9 @@ export function BookCover({ book, size }: BookCoverProps) {
   );
 }
 
-export function HeroPlaceholder() {
+export function HeroPlaceholder({ size = "large" }: { size?: "large" | "player" }) {
   return (
-    <div className="flex aspect-[3/4] h-[clamp(220px,30vh,310px)] items-center justify-center rounded-[2.15rem] bg-white/[0.08] p-2 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.14)]">
+    <div className={cn("flex aspect-[3/4] items-center justify-center bg-white/[0.08] p-2 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.14)]", size === "player" ? "h-[clamp(300px,54vh,560px)] rounded-[2.35rem]" : "h-[clamp(220px,30vh,310px)] rounded-[2.15rem]") }>
       <div className="flex h-full w-full items-center justify-center rounded-[calc(2.15rem-0.5rem)] bg-[radial-gradient(circle_at_50%_30%,rgba(41,151,255,0.28),transparent_34%),linear-gradient(160deg,#28282b,#000000)]">
         <PlayIcon className="h-16 w-16 text-white/[0.72]" />
       </div>

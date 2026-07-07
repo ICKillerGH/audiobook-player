@@ -89,3 +89,21 @@ export function TimerIcon({ className }: IconProps) {
     </IconBase>
   );
 }
+
+export function InfoIcon({ className }: IconProps) {
+  return (
+    <IconBase className={className}>
+      <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="1.55" />
+      <path d="M12 10.8v5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+      <path d="M12 7.7h.01" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+    </IconBase>
+  );
+}
+
+export function CloseIcon({ className }: IconProps) {
+  return (
+    <IconBase className={className}>
+      <path d="m7.2 7.2 9.6 9.6M16.8 7.2l-9.6 9.6" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" />
+    </IconBase>
+  );
+}
