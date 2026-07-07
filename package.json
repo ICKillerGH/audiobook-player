@@ -1,0 +1,57 @@
+{
+  "name": "audiobook-player",
+  "version": "0.1.0",
+  "description": "A polished Windows audiobook player with library management, progress memory, markers, speed controls, and sleep timer.",
+  "private": true,
+  "type": "module",
+  "main": "./out/main/index.js",
+  "scripts": {
+    "postinstall": "node node_modules/electron/install.js",
+    "repair:electron": "node node_modules/electron/install.js",
+    "dev": "electron-vite dev",
+    "typecheck": "tsc -p tsconfig.node.json --noEmit && tsc -p tsconfig.web.json --noEmit",
+    "build": "npm run typecheck && electron-vite build",
+    "dist": "npm run build && electron-builder --win"
+  },
+  "dependencies": {
+    "class-variance-authority": "latest",
+    "clsx": "latest",
+    "music-metadata": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "tailwind-merge": "latest"
+  },
+  "devDependencies": {
+    "@types/node": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "@vitejs/plugin-react": "^5.1.2",
+    "autoprefixer": "latest",
+    "electron": "latest",
+    "electron-builder": "latest",
+    "electron-vite": "^5.0.0",
+    "postcss": "latest",
+    "tailwindcss": "^3.4.17",
+    "typescript": "latest",
+    "vite": "^7.3.6"
+  },
+  "build": {
+    "appId": "com.local.audiobookplayer",
+    "productName": "Audiobook Player",
+    "directories": {
+      "buildResources": "resources",
+      "output": "release"
+    },
+    "files": [
+      "out/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}
