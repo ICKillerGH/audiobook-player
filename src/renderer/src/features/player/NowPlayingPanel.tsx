@@ -132,7 +132,7 @@ export function NowPlayingPanel({
               </div>
             </div>
 
-            <div className="mt-6 flex flex-wrap items-center gap-3">
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
               <SkipButton label="-1m" onClick={() => void onSkip(-60)} disabled={!book} ariaLabel="Skip back one minute" />
               <SkipButton label={`-${settings.skipSeconds}s`} onClick={() => void onSkip(-settings.skipSeconds)} disabled={!book} ariaLabel={`Skip back ${settings.skipSeconds} seconds`} />
               <Button variant="player" size="player" className="h-16 w-16" onClick={() => void onTogglePlayback()} disabled={!book || !mediaUrl} aria-label={isPlaying ? "Pause" : "Play"}>
@@ -142,20 +142,22 @@ export function NowPlayingPanel({
               <SkipButton label="+1m" onClick={() => void onSkip(60)} disabled={!book} ariaLabel="Skip forward one minute" />
             </div>
 
-            <div className="scroll-quiet mt-5 flex max-w-full gap-1.5 overflow-x-auto pb-1">
-              {speedOptions.map((rate) => (
-                <button
-                  key={rate}
-                  type="button"
-                  onClick={() => void onChangePlaybackRate(rate)}
-                  className={cn(
-                    "shrink-0 rounded-full px-3 py-2 text-control font-semibold text-white/[0.66] transition-[background-color,color,transform] duration-500 ease-apple hover:bg-white/10 hover:text-white active:scale-[0.98]",
-                    settings.playbackRate === rate && "bg-white text-apple-ink hover:bg-white hover:text-apple-ink"
-                  )}
-                >
-                  {rate}x
-                </button>
-              ))}
+            <div className="scroll-quiet mt-5 max-w-full overflow-x-auto pb-1">
+              <div className="mx-auto flex w-max gap-1.5">
+                {speedOptions.map((rate) => (
+                  <button
+                    key={rate}
+                    type="button"
+                    onClick={() => void onChangePlaybackRate(rate)}
+                    className={cn(
+                      "shrink-0 rounded-full px-3 py-2 text-control font-semibold text-white/[0.66] transition-[background-color,color,transform] duration-500 ease-apple hover:bg-white/10 hover:text-white active:scale-[0.98]",
+                      settings.playbackRate === rate && "bg-white text-apple-ink hover:bg-white hover:text-apple-ink"
+                    )}
+                  >
+                    {rate}x
+                  </button>
+                ))}
+              </div>
             </div>
 
             {loadError ? <p className="mt-4 text-control text-apple-bright">{loadError}</p> : null}
