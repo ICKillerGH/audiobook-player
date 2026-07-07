@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { BookCover, HeroPlaceholder } from "@/shared/components/BookCover";
-import { BackIcon, BookmarkIcon, ForwardIcon, InfoIcon, PauseIcon, PlayIcon, TimerIcon } from "@/shared/components/icons";
+import { BookmarkIcon, InfoIcon, PauseIcon, PlayIcon, TimerIcon } from "@/shared/components/icons";
 import { clamp, formatCountdown, formatTime } from "@/shared/lib/format";
 
 const speedOptions = [0.75, 1, 1.15, 1.25, 1.5, 1.75, 2, 2.5];
@@ -133,21 +133,13 @@ export function NowPlayingPanel({
             </div>
 
             <div className="mt-6 flex flex-wrap items-center gap-3">
-              <Button variant="ghost" size="icon" className="h-12 w-12 bg-white/[0.08] text-white hover:bg-white/[0.14] hover:text-white" onClick={() => void onSkip(-60)} disabled={!book} aria-label="Skip back one minute">
-                <BackIcon />
-              </Button>
-              <Button variant="ghost" size="icon" className="h-12 w-12 bg-white/[0.08] text-white hover:bg-white/[0.14] hover:text-white" onClick={() => void onSkip(-settings.skipSeconds)} disabled={!book} aria-label={`Skip back ${settings.skipSeconds} seconds`}>
-                <BackIcon />
-              </Button>
+              <SkipButton label="-1m" onClick={() => void onSkip(-60)} disabled={!book} ariaLabel="Skip back one minute" />
+              <SkipButton label={`-${settings.skipSeconds}s`} onClick={() => void onSkip(-settings.skipSeconds)} disabled={!book} ariaLabel={`Skip back ${settings.skipSeconds} seconds`} />
               <Button variant="player" size="player" className="h-16 w-16" onClick={() => void onTogglePlayback()} disabled={!book || !mediaUrl} aria-label={isPlaying ? "Pause" : "Play"}>
                 {isPlaying ? <PauseIcon /> : <PlayIcon />}
               </Button>
-              <Button variant="ghost" size="icon" className="h-12 w-12 bg-white/[0.08] text-white hover:bg-white/[0.14] hover:text-white" onClick={() => void onSkip(settings.skipSeconds)} disabled={!book} aria-label={`Skip forward ${settings.skipSeconds} seconds`}>
-                <ForwardIcon />
-              </Button>
-              <Button variant="ghost" size="icon" className="h-12 w-12 bg-white/[0.08] text-white hover:bg-white/[0.14] hover:text-white" onClick={() => void onSkip(60)} disabled={!book} aria-label="Skip forward one minute">
-                <ForwardIcon />
-              </Button>
+              <SkipButton label={`+${settings.skipSeconds}s`} onClick={() => void onSkip(settings.skipSeconds)} disabled={!book} ariaLabel={`Skip forward ${settings.skipSeconds} seconds`} />
+              <SkipButton label="+1m" onClick={() => void onSkip(60)} disabled={!book} ariaLabel="Skip forward one minute" />
             </div>
 
             <div className="scroll-quiet mt-5 flex max-w-full gap-1.5 overflow-x-auto pb-1">
@@ -172,6 +164,33 @@ export function NowPlayingPanel({
         </div>
       </div>
     </section>
+  );
+}
+
+function SkipButton({
+  label,
+  disabled,
+  ariaLabel,
+  onClick
+}: {
+  label: string;
+  disabled: boolean;
+  ariaLabel: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={ariaLabel}
+      title={ariaLabel}
+      className={cn(
+        "group flex h-14 w-14 items-center justify-center rounded-full bg-white/[0.13] text-white outline-none transition-[background-color,color,transform] duration-500 ease-apple hover:bg-white/[0.18] active:scale-[0.98] disabled:pointer-events-none disabled:opacity-35 focus-visible:ring-2 focus-visible:ring-apple-bright focus-visible:ring-offset-2 focus-visible:ring-offset-apple-black"
+      )}
+    >
+      <span className="font-text text-[13px] font-semibold tabular-nums tracking-[-0.01em]">{label}</span>
+    </button>
   );
 }
 
