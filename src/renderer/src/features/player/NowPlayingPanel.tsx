@@ -8,6 +8,7 @@ import { BookmarkIcon, InfoIcon, PauseIcon, PlayIcon, TimerIcon } from "@/shared
 import { clamp, formatCountdown, formatTime } from "@/shared/lib/format";
 
 const speedOptions = [0.75, 1, 1.15, 1.25, 1.5, 1.75, 2, 2.5];
+const seekThumbSizePx = 18;
 
 interface NowPlayingPanelProps {
   book?: Audiobook;
@@ -218,10 +219,13 @@ function SeekRange({
       return;
     }
 
-    const rect = event.currentTarget.getBoundingClientRect();
-    const ratio = clamp((event.clientX - rect.left) / rect.width, 0, 1);
+    const ratio = ratioFromPointer(event.currentTarget, event.clientX);
+    updatePreviewForRatio(event.currentTarget, ratio);
+  }
+
+  function updatePreviewForRatio(input: HTMLInputElement, ratio: number): void {
     setHoverPreview({
-      percent: ratio * 100,
+      percent: thumbCenterPercent(input, ratio),
       time: ratio * duration
     });
   }
@@ -243,9 +247,14 @@ function SeekRange({
         max={maxDuration}
         step={1}
         value={Math.min(currentTime, maxDuration)}
-        onChange={(event) => void onSeek(Number(event.target.value))}
+        onChange={(event) => {
+          const nextValue = Number(event.currentTarget.value);
+          updatePreviewForRatio(event.currentTarget, clamp(nextValue / maxDuration, 0, 1));
+          void onSeek(nextValue);
+        }}
         onMouseEnter={updateHoverPreview}
         onMouseMove={updateHoverPreview}
+        onMouseDown={updateHoverPreview}
         onMouseLeave={() => setHoverPreview(null)}
         style={{ "--range-progress": `${progressPercent}%` } as CSSProperties}
         disabled={disabled}
@@ -253,6 +262,20 @@ function SeekRange({
       />
     </div>
   );
+}
+
+function ratioFromPointer(input: HTMLInputElement, clientX: number): number {
+  const rect = input.getBoundingClientRect();
+  const usableWidth = Math.max(rect.width - seekThumbSizePx, 1);
+  return clamp((clientX - rect.left - seekThumbSizePx / 2) / usableWidth, 0, 1);
+}
+
+function thumbCenterPercent(input: HTMLInputElement, ratio: number): number {
+  const rect = input.getBoundingClientRect();
+  if (rect.width <= 0) return ratio * 100;
+
+  const usableWidth = Math.max(rect.width - seekThumbSizePx, 1);
+  return ((seekThumbSizePx / 2 + ratio * usableWidth) / rect.width) * 100;
 }
 
 function Metric({ label, value }: { label: string; value: string }) {
