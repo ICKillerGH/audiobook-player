@@ -8,6 +8,7 @@ import { MarkersDialog } from "@/features/markers/MarkersDialog";
 import { NowPlayingPanel } from "@/features/player/NowPlayingPanel";
 import { useOsMediaControls } from "@/features/player/useOsMediaControls";
 import { SleepTimerDialog } from "@/features/sleep/SleepTimerDialog";
+import { useKeyPress } from "@/shared/hooks/useKeyPress";
 import { clamp, formatTime } from "@/shared/lib/format";
 
 type ActiveModal = "markers" | "sleep" | "details" | null;
@@ -17,6 +18,8 @@ const defaultSettings: PlayerSettings = {
   skipSeconds: 30,
   autoSaveSeconds: 5
 };
+
+const playerShortcutKeys = ["h", "j", "k", "l", "ñ"] as const;
 
 function App() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -55,6 +58,31 @@ function App() {
     onSeek: seekTo,
     onSkip: skipBy
   });
+
+  useKeyPress(
+    playerShortcutKeys,
+    (event) => {
+      switch (event.key.toLowerCase()) {
+        case "h":
+          void skipBy(-60);
+          break;
+        case "j":
+          void skipBy(-settings.skipSeconds);
+          break;
+        case "k":
+          if (event.repeat) return;
+          void togglePlayback();
+          break;
+        case "l":
+          void skipBy(settings.skipSeconds);
+          break;
+        case "ñ":
+          void skipBy(60);
+          break;
+      }
+    },
+    { preventDefault: true }
+  );
 
   useEffect(() => {
     void bootstrap();
