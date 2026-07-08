@@ -13,7 +13,7 @@ export function AppHeader({ isImporting, onImportFiles, onImportFolder }: AppHea
     <header className="mb-4 flex items-center justify-between gap-4">
       <div className="flex items-center gap-4">
         <img
-          src="/app-icon.png"
+          src="./app-icon.png"
           alt=""
           aria-hidden="true"
           draggable={false}
