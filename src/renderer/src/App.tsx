@@ -25,6 +25,7 @@ function App() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const activeBookIdRef = useRef<string | null>(null);
   const lastSavedAtRef = useRef(0);
+  const suppressNextPausePersistRef = useRef(false);
   const [books, setBooks] = useState<Audiobook[]>([]);
   const [selectedBookId, setSelectedBookId] = useState<string | null>(null);
   const [mediaUrl, setMediaUrl] = useState("");
@@ -110,9 +111,21 @@ function App() {
     }
 
     let cancelled = false;
+    const audio = audioRef.current;
+    const activeBookId = activeBookIdRef.current;
+
     setLoadError(null);
     setIsPlaying(false);
-    audioRef.current?.pause();
+
+    if (audio && activeBookId && activeBookId !== selectedBook.id) {
+      void persistProgress(audio.currentTime, audio.duration, activeBookId);
+      suppressNextPausePersistRef.current = !audio.paused;
+    }
+
+    audio?.pause();
+    setMediaUrl("");
+    setCurrentTime(selectedBook.progressPosition);
+    setDuration(selectedBook.duration);
 
     window.audiobook
       .getMediaUrl(selectedBook.id)
@@ -142,7 +155,7 @@ function App() {
       const audio = audioRef.current;
       audio?.pause();
       setIsPlaying(false);
-      void persistProgress();
+      void persistProgress(audio?.currentTime, audio?.duration, activeBookIdRef.current ?? undefined);
       setSleepRemaining(null);
       setStatusMessage("Sleep timer ended. Playback paused.");
       return;
@@ -206,7 +219,7 @@ function App() {
 
   async function playSelectedBook(): Promise<void> {
     const audio = audioRef.current;
-    if (!audio || !selectedBook || !mediaUrl) return;
+    if (!audio || !selectedBook || !mediaUrl || activeBookIdRef.current !== selectedBook.id) return;
 
     if (!audio.paused) return;
 
@@ -224,7 +237,7 @@ function App() {
 
     audio.pause();
     setIsPlaying(false);
-    await persistProgress(audio.currentTime, audio.duration);
+    await persistProgress(audio.currentTime, audio.duration, activeBookIdRef.current ?? undefined);
   }
 
   async function togglePlayback(): Promise<void> {
@@ -242,6 +255,7 @@ function App() {
   function onLoadedMetadata(): void {
     const audio = audioRef.current;
     if (!audio || !selectedBook) return;
+    if (activeBookIdRef.current !== selectedBook.id) return;
 
     const resolvedDuration = Number.isFinite(audio.duration) ? audio.duration : selectedBook.duration;
     const resumeAt = Math.min(selectedBook.progressPosition, Math.max(resolvedDuration - 3, 0));
@@ -254,18 +268,18 @@ function App() {
 
   function onTimeUpdate(): void {
     const audio = audioRef.current;
-    if (!audio) return;
+    if (!audio || !selectedBook || activeBookIdRef.current !== selectedBook.id) return;
 
     setCurrentTime(audio.currentTime);
     setDuration(Number.isFinite(audio.duration) ? audio.duration : duration);
 
     const now = Date.now();
     if (now - lastSavedAtRef.current > settings.autoSaveSeconds * 1000) {
-      void persistProgress(audio.currentTime, audio.duration, activeBookIdRef.current ?? selectedBook?.id);
+      void persistProgress(audio.currentTime, audio.duration, activeBookIdRef.current ?? undefined);
     }
   }
 
-  async function persistProgress(position = currentTime, nextDuration = duration, bookId = selectedBook?.id): Promise<void> {
+  async function persistProgress(position = currentTime, nextDuration = duration, bookId = activeBookIdRef.current ?? undefined): Promise<void> {
     if (!bookId) return;
     lastSavedAtRef.current = Date.now();
 
@@ -287,12 +301,13 @@ function App() {
 
   async function seekTo(value: number): Promise<void> {
     const audio = audioRef.current;
-    if (!audio || !selectedBook) return;
+    const activeBookId = activeBookIdRef.current;
+    if (!audio || !selectedBook || activeBookId !== selectedBook.id) return;
 
     const next = clamp(value, 0, duration || selectedBook.duration || value);
     audio.currentTime = next;
     setCurrentTime(next);
-    await persistProgress(next, duration);
+    await persistProgress(next, duration, activeBookId);
   }
 
   async function skipBy(delta: number): Promise<void> {
@@ -389,12 +404,21 @@ function App() {
             onTimeUpdate={onTimeUpdate}
             onAudioPlay={() => setIsPlaying(true)}
             onAudioPause={() => {
+              const audio = audioRef.current;
               setIsPlaying(false);
-              void persistProgress();
+
+              if (suppressNextPausePersistRef.current) {
+                suppressNextPausePersistRef.current = false;
+                return;
+              }
+
+              void persistProgress(audio?.currentTime, audio?.duration, activeBookIdRef.current ?? undefined);
             }}
             onAudioEnded={() => {
+              const audio = audioRef.current;
+              const endedAt = audio && Number.isFinite(audio.duration) ? audio.duration : duration;
               setIsPlaying(false);
-              void persistProgress(duration, duration);
+              void persistProgress(endedAt, endedAt, activeBookIdRef.current ?? undefined);
             }}
           />
         </main>
