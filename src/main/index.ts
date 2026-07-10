@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, nativeImage, shell, type NativeImage } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, nativeImage, powerSaveBlocker, shell, type NativeImage } from "electron";
 import { createHash, randomUUID } from "node:crypto";
 import { createReadStream, existsSync } from "node:fs";
 import { mkdir, readFile, readdir, rename, stat, writeFile } from "node:fs/promises";
@@ -39,6 +39,7 @@ let mediaServerPort: number | null = null;
 const mediaToken = randomUUID();
 const osMediaStates = new Map<number, OsMediaState>();
 const windowsAppUserModelId = "com.local.audiobookplayer";
+let displaySleepBlockerId: number | null = null;
 
 function bundledResourcePath(fileName: string): string {
   return app.isPackaged
@@ -92,7 +93,10 @@ function createWindow(): void {
     event.preventDefault();
     sendOsMediaCommand(mainWindow, osCommand);
   });
-  mainWindow.on("closed", () => osMediaStates.delete(mainWindow.id));
+  mainWindow.on("closed", () => {
+    osMediaStates.delete(mainWindow.id);
+    updateDisplaySleepBlocker();
+  });
   updateWindowOsMediaState(mainWindow, { canPlay: false, isPlaying: false });
   mainWindow.once("ready-to-show", () => mainWindow.show());
 
@@ -147,6 +151,30 @@ function osMediaCommandForAppCommand(command: string, state: OsMediaState | unde
 function updateWindowOsMediaState(targetWindow: BrowserWindow, state: OsMediaState): void {
   if (targetWindow.isDestroyed()) return;
   osMediaStates.set(targetWindow.id, state);
+  updateDisplaySleepBlocker();
+}
+
+function updateDisplaySleepBlocker(): void {
+  const shouldBlockDisplaySleep = [...osMediaStates.values()].some((state) => state.isPlaying);
+
+  if (shouldBlockDisplaySleep) {
+    if (displaySleepBlockerId === null || !powerSaveBlocker.isStarted(displaySleepBlockerId)) {
+      displaySleepBlockerId = powerSaveBlocker.start("prevent-display-sleep");
+    }
+    return;
+  }
+
+  stopDisplaySleepBlocker();
+}
+
+function stopDisplaySleepBlocker(): void {
+  if (displaySleepBlockerId === null) return;
+
+  if (powerSaveBlocker.isStarted(displaySleepBlockerId)) {
+    powerSaveBlocker.stop(displaySleepBlockerId);
+  }
+
+  displaySleepBlockerId = null;
 }
 
 function storePath(): string {
@@ -650,6 +678,7 @@ app.on("window-all-closed", () => {
 });
 
 app.on("before-quit", () => {
+  stopDisplaySleepBlocker();
   mediaServer?.close();
   mediaServer = null;
   mediaServerPort = null;
